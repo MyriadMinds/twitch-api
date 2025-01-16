@@ -43,6 +43,9 @@ let (access_token, new_refresh_token) = Twitch::authenticate(&client_id, &client
 
 ## Features
 
+- Fully synchronous communication
+- Automatic handling of reconnect messages for EventSub
+
 ### Supported API Endpoints
 - Get access token from refresh token
 - Create EventSub connection
