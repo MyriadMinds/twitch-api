@@ -78,4 +78,5 @@ let (access_token, new_refresh_token) = Twitch::authenticate(&client_id, &client
 
 - More EventSub subcriptions
 - More API Endpoints
+- Helpers for quick setup and teardown of http servers for acquiring tokens
 - Better signaling of errors happening with the EventSub connection
