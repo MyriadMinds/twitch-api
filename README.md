@@ -75,7 +75,7 @@ let (access_token, new_refresh_token) = Twitch::authenticate(&client_id, &client
 - HypeTrainBegin
 - HypeTrainProgress
 - HypeTrainEnd
-- ShoutoutReceived,
+- ShoutoutReceived
 
 ## Planned
 

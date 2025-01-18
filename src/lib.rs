@@ -1,9 +1,14 @@
 mod api;
 mod eventsub;
 
+#[cfg(feature = "token-helpers")]
+mod token;
+
 use api::{APIEndpoint, APIError, TwitchAPI};
 pub use eventsub::{Conditions, Eventsub, EventsubError, Subscription, SubscriptionType};
 use thiserror::Error;
+#[cfg(feature = "token-helpers")]
+pub use token::{Scope, get_refresh_token};
 use twitch_eventsub_structs::{EventSubscription, NewAccessTokenResponse};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -75,3 +80,19 @@ impl Twitch {
     Ok(self.api.post::<EventSubscription, _>(APIEndpoint::Subscriptions, subscription)?)
   }
 }
+
+// #[cfg(test)]
+// mod tests {
+//   use super::*;
+
+//   #[test]
+//   fn test() {
+//     let scopes = vec![Scope::AnalyticsReadExtensions];
+
+//     let client_id = std::env::var("CLIENT_ID").unwrap();
+//     let client_secret = std::env::var("CLIENT_SECRET").unwrap();
+
+//     let tokens = get_refresh_token(client_id, client_secret, &scopes);
+//     println!("{tokens:#?}");
+//   }
+// }
