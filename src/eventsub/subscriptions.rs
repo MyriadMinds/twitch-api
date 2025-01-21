@@ -42,7 +42,7 @@ pub enum SubscriptionType {
   HypeTrainBegin,
   HypeTrainProgress,
   HypeTrainEnd,
-  ShoutoutReceived,
+  ShoutoutCreate,
 }
 
 impl SubscriptionType {
@@ -83,7 +83,7 @@ impl SubscriptionType {
       SubscriptionType::HypeTrainBegin => ("channel.hype_train.begin", "1"),
       SubscriptionType::HypeTrainProgress => ("channel.hype_train.progress", "1"),
       SubscriptionType::HypeTrainEnd => ("channel.hype_train.end", "1"),
-      SubscriptionType::ShoutoutReceived => ("channel.ShoutoutReceived.create", "1"),
+      SubscriptionType::ShoutoutCreate => ("channel.shoutout.create", "1"),
     };
 
     (kind.to_owned(), version.to_owned())
@@ -114,7 +114,7 @@ impl SubscriptionType {
       SubscriptionType::HypeTrainBegin => vec![cond.broadcaster_user_id()],
       SubscriptionType::HypeTrainProgress => vec![cond.broadcaster_user_id()],
       SubscriptionType::HypeTrainEnd => vec![cond.broadcaster_user_id()],
-      SubscriptionType::ShoutoutReceived =>
+      SubscriptionType::ShoutoutCreate =>
         vec![cond.broadcaster_user_id(), cond.moderator_user_id()],
     };
 
@@ -146,7 +146,7 @@ impl SubscriptionType {
       SubscriptionType::HypeTrainBegin => "Hype Train Begin",
       SubscriptionType::HypeTrainProgress => "Hype Train Progress",
       SubscriptionType::HypeTrainEnd => "Hype Train End",
-      SubscriptionType::ShoutoutReceived => "Shoutout Received",
+      SubscriptionType::ShoutoutCreate => "Shoutout Received",
     }
   }
 }

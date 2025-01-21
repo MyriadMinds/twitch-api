@@ -1,6 +1,7 @@
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
 
+use bitmask_enum::bitmask;
 use twitch_eventsub_structs::NewAccessTokenResponse;
 
 use crate::SubscriptionType;
@@ -8,12 +9,12 @@ use crate::SubscriptionType;
 pub fn get_refresh_token(
   client_id: String,
   client_secret: String,
-  scopes: &[Scope],
+  scopes: Scope,
 ) -> (String, String) {
-  let scopes = "user%3Aread%3Achat";
   let request = format!(
     "https://id.twitch.tv/oauth2/authorize?response_type=code&client_id={}&redirect_uri=http://localhost:8080&scope={}",
-    client_id, scopes
+    client_id,
+    scopes.get_scopes()
   );
 
   let listener = TcpListener::bind("127.0.0.1:8080").expect("Failed to start HTTP server.");
@@ -27,11 +28,6 @@ pub fn get_refresh_token(
 
   let response = "HTTP/1.1 200 OK\r\n\r\n";
   connection.write_all(response.as_bytes()).expect("Failed to send response.");
-
-  let request = format!(
-    "client_id={}&client_secret={}&code={}&grant_type=authorization_code&redirect_uri=http://localhost:8080",
-    client_id, client_secret, code,
-  );
 
   let response = ureq::post("https://id.twitch.tv/oauth2/token")
     .send_form(&[
@@ -53,6 +49,7 @@ pub fn get_refresh_token(
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#[bitmask(u128)]
 pub enum Scope {
   AnalyticsReadExtensions,
   AnalyticsReadGames,
@@ -131,83 +128,91 @@ pub enum Scope {
 }
 
 impl Scope {
-  fn scope(&self) -> &'static str {
-    match self {
-      Scope::AnalyticsReadExtensions => "analytics:read:extensions",
-      Scope::AnalyticsReadGames => "analytics:read:games",
-      Scope::BitsRead => "bits:read",
-      Scope::ChannelBot => "channel:bot",
-      Scope::ChannelManageAds => "channel:manage:ads",
-      Scope::ChannelReadAds => "channel:read:ads",
-      Scope::ChannelManageBroadcast => "channel:manage:broadcast",
-      Scope::ChannelReadCharity => "channel:read:charity",
-      Scope::ChannelEditCommercial => "channel:edit:commercial",
-      Scope::ChannelReadEditors => "channel:read:editors",
-      Scope::ChannelManageExtensions => "channel:manage:extensions",
-      Scope::ChannelReadGoals => "channel:read:goals",
-      Scope::ChannelReadGuestStar => "channel:read:guest_star",
-      Scope::ChannelManageGuestStar => "channel:manage:guest_star",
-      Scope::ChannelReadHypeTrain => "channel:read:hype_train",
-      Scope::ChannelManageModerators => "channel:manage:moderators",
-      Scope::ChannelReadPolls => "channel:read:polls",
-      Scope::ChannelManagePolls => "channel:manage:polls",
-      Scope::ChannelReadPredictions => "channel:read:predictions",
-      Scope::ChannelManagePredictions => "channel:manage:predictions",
-      Scope::ChannelManageRaids => "channel:manage:raids",
-      Scope::ChannelReadRedemptions => "channel:read:redemptions",
-      Scope::ChannelManageRedemptions => "channel:manage:redemptions",
-      Scope::ChannelManageSchedule => "channel:manage:schedule",
-      Scope::ChannelReadStreamKey => "channel:read:stream_key",
-      Scope::ChannelReadSubscriptions => "channel:read:subscriptions",
-      Scope::ChannelManageVideos => "channel:manage:videos",
-      Scope::ChannelReadVips => "channel:read:vips	",
-      Scope::ChannelManageVips => "channel:manage:vips",
-      Scope::ClipsEdit => "clips:edit",
-      Scope::ModerationRead => "moderation:read",
-      Scope::ModeratorManageAnnouncements => "moderator:manage:announcements",
-      Scope::ModeratorManageAutomod => "moderator:manage:automod",
-      Scope::ModeratorReadAutomodSettings => "moderator:read:automod_settings	",
-      Scope::ModeratorManageAutomodSettings => "moderator:manage:automod_settings",
-      Scope::ModeratorReadBannedUsers => "moderator:read:banned_users	",
-      Scope::ModeratorManageBannedUsers => "moderator:manage:banned_users",
-      Scope::ModeratorReadBlockedTerms => "moderator:read:blocked_terms",
-      Scope::ModeratorReadChatMessages => "moderator:read:chat_messages",
-      Scope::ModeratorManageBlockedTerms => "moderator:manage:blocked_terms",
-      Scope::ModeratorManageChatMessages => "moderator:manage:chat_messages",
-      Scope::ModeratorReadChatSettings => "moderator:read:chat_settings",
-      Scope::ModeratorManageChatSettings => "moderator:manage:chat_settings",
-      Scope::ModeratorReadChatters => "moderator:read:chatters	",
-      Scope::ModeratorReadFollowers => "moderator:read:followers",
-      Scope::ModeratorReadGuestStar => "moderator:read:guest_star	",
-      Scope::ModeratorManageGuestStar => "moderator:manage:guest_star",
-      Scope::ModeratorReadModerators => "moderator:read:moderators	",
-      Scope::ModeratorReadShieldMode => "moderator:read:shield_mode",
-      Scope::ModeratorManageShieldMode => "moderator:manage:shield_mode",
-      Scope::ModeratorReadShoutouts => "moderator:read:shoutouts",
-      Scope::ModeratorManageShoutouts => "moderator:manage:shoutouts",
-      Scope::ModeratorReadSuspiciousUsers => "moderator:read:suspicious_users",
-      Scope::ModeratorReadUnbanRequests => "moderator:read:unban_requests	",
-      Scope::ModeratorManageUnbanRequests => "moderator:manage:unban_requests",
-      Scope::ModeratorReadVips => "moderator:read:vips",
-      Scope::ModeratorReadWarnings => "moderator:read:warnings	",
-      Scope::ModeratorManageWarnings => "moderator:manage:warnings",
-      Scope::UserBot => "user:bot",
-      Scope::UserEdit => "user:edit",
-      Scope::UserEditBroadcast => "user:edit:broadcast",
-      Scope::UserReadBlockedUsers => "user:read:blocked_users	",
-      Scope::UserManageBlockedUsers => "user:manage:blocked_users",
-      Scope::UserReadBroadcast => "user:read:broadcast",
-      Scope::UserReadChat => "user:read:chat",
-      Scope::UserManageChatColor => "user:manage:chat_color",
-      Scope::UserReadEmail => "user:read:email	",
-      Scope::UserReadEmotes => "user:read:emotes	",
-      Scope::UserReadFollows => "user:read:follows",
-      Scope::UserReadModeratedChannels => "user:read:moderated_channels",
-      Scope::UserReadSubscriptions => "user:read:subscriptions",
-      Scope::UserReadWhispers => "user:read:whispers",
-      Scope::UserManageWhispers => "user:manage:whispers",
-      Scope::UserWriteChat => "user:write:chat",
-    }
+  fn get_scopes(&self) -> String {
+    Self::scopes()
+      .filter_map(|&(value, scope)| self.contains(value).then(|| scope))
+      .collect::<Vec<&'static str>>()
+      .join("+")
+  }
+
+  fn scopes() -> impl Iterator<Item = &'static (Self, &'static str)> {
+    [
+      (Self::AnalyticsReadExtensions, "analytics%3Aread%3Aextensions"),
+      (Self::AnalyticsReadGames, "analytics%3Aread%3Agames"),
+      (Self::BitsRead, "bits%3Aread"),
+      (Self::ChannelBot, "channel%3Abot"),
+      (Self::ChannelManageAds, "channel%3Amanage%3Aads"),
+      (Self::ChannelReadAds, "channel%3Aread%3Aads"),
+      (Self::ChannelManageBroadcast, "channel%3Amanage%3Abroadcast"),
+      (Self::ChannelReadCharity, "channel%3Aread%3Acharity"),
+      (Self::ChannelEditCommercial, "channel%3Aedit%3Acommercial"),
+      (Self::ChannelReadEditors, "channel%3Aread%3Aeditors"),
+      (Self::ChannelManageExtensions, "channel%3Amanage%3Aextensions"),
+      (Self::ChannelReadGoals, "channel%3Aread%3Agoals"),
+      (Self::ChannelReadGuestStar, "channel%3Aread%3Aguest_star"),
+      (Self::ChannelManageGuestStar, "channel%3Amanage%3Aguest_star"),
+      (Self::ChannelReadHypeTrain, "channel%3Aread%3Ahype_train"),
+      (Self::ChannelManageModerators, "channel%3Amanage%3Amoderators"),
+      (Self::ChannelReadPolls, "channel%3Aread%3Apolls"),
+      (Self::ChannelManagePolls, "channel%3Amanage%3Apolls"),
+      (Self::ChannelReadPredictions, "channel%3Aread%3Apredictions"),
+      (Self::ChannelManagePredictions, "channel%3Amanage%3Apredictions"),
+      (Self::ChannelManageRaids, "channel%3Amanage%3Araids"),
+      (Self::ChannelReadRedemptions, "channel%3Aread%3Aredemptions"),
+      (Self::ChannelManageRedemptions, "channel%3Amanage%3Aredemptions"),
+      (Self::ChannelManageSchedule, "channel%3Amanage%3Aschedule"),
+      (Self::ChannelReadStreamKey, "channel%3Aread%3Astream_key"),
+      (Self::ChannelReadSubscriptions, "channel%3Aread%3Asubscriptions"),
+      (Self::ChannelManageVideos, "channel%3Amanage%3Avideos"),
+      (Self::ChannelReadVips, "channel%3Aread%3Avips"),
+      (Self::ChannelManageVips, "channel%3Amanage%3Avips"),
+      (Self::ClipsEdit, "clips%3Aedit"),
+      (Self::ModerationRead, "moderation%3Aread"),
+      (Self::ModeratorManageAnnouncements, "moderator%3Amanage%3Aannouncements"),
+      (Self::ModeratorManageAutomod, "moderator%3Amanage%3Aautomod"),
+      (Self::ModeratorReadAutomodSettings, "moderator%3Aread%3Aautomod_settings"),
+      (Self::ModeratorManageAutomodSettings, "moderator%3Amanage%3Aautomod_settings"),
+      (Self::ModeratorReadBannedUsers, "moderator%3Aread%3Abanned_users"),
+      (Self::ModeratorManageBannedUsers, "moderator%3Amanage%3Abanned_users"),
+      (Self::ModeratorReadBlockedTerms, "moderator%3Aread%3Ablocked_terms"),
+      (Self::ModeratorReadChatMessages, "moderator%3Aread%3Achat_messages"),
+      (Self::ModeratorManageBlockedTerms, "moderator%3Amanage%3Ablocked_terms"),
+      (Self::ModeratorManageChatMessages, "moderator%3Amanage%3Achat_messages"),
+      (Self::ModeratorReadChatSettings, "moderator%3Aread%3Achat_settings"),
+      (Self::ModeratorManageChatSettings, "moderator%3Amanage%3Achat_settings"),
+      (Self::ModeratorReadChatters, "moderator%3Aread%3Achatters"),
+      (Self::ModeratorReadFollowers, "moderator%3Aread%3Afollowers"),
+      (Self::ModeratorReadGuestStar, "moderator%3Aread%3Aguest_star"),
+      (Self::ModeratorManageGuestStar, "moderator%3Amanage%3Aguest_star"),
+      (Self::ModeratorReadModerators, "moderator%3Aread%3Amoderators"),
+      (Self::ModeratorReadShieldMode, "moderator%3Aread%3Ashield_mode"),
+      (Self::ModeratorManageShieldMode, "moderator%3Amanage%3Ashield_mode"),
+      (Self::ModeratorReadShoutouts, "moderator%3Aread%3Ashoutouts"),
+      (Self::ModeratorManageShoutouts, "moderator%3Amanage%3Ashoutouts"),
+      (Self::ModeratorReadSuspiciousUsers, "moderator%3Aread%3Asuspicious_users"),
+      (Self::ModeratorReadUnbanRequests, "moderator%3Aread%3Aunban_requests"),
+      (Self::ModeratorManageUnbanRequests, "moderator%3Amanage%3Aunban_requests"),
+      (Self::ModeratorReadVips, "moderator%3Aread%3Avips"),
+      (Self::ModeratorReadWarnings, "moderator%3Aread%3Awarnings"),
+      (Self::ModeratorManageWarnings, "moderator%3Amanage%3Awarnings"),
+      (Self::UserBot, "user%3Abot"),
+      (Self::UserEdit, "user%3Aedit"),
+      (Self::UserEditBroadcast, "user%3Aedit%3Abroadcast"),
+      (Self::UserReadBlockedUsers, "user%3Aread%3Ablocked_users"),
+      (Self::UserManageBlockedUsers, "user%3Amanage%3Ablocked_users"),
+      (Self::UserReadBroadcast, "user%3Aread%3Abroadcast"),
+      (Self::UserReadChat, "user%3Aread%3Achat"),
+      (Self::UserManageChatColor, "user%3Amanage%3Achat_color"),
+      (Self::UserReadEmail, "user%3Aread%3Aemail"),
+      (Self::UserReadEmotes, "user%3Aread%3Aemotes"),
+      (Self::UserReadFollows, "user%3Aread%3Afollows"),
+      (Self::UserReadModeratedChannels, "user%3Aread%3Amoderated_channels"),
+      (Self::UserReadSubscriptions, "user%3Aread%3Asubscriptions"),
+      (Self::UserReadWhispers, "user%3Aread%3Awhispers"),
+      (Self::UserManageWhispers, "user%3Amanage%3Awhispers"),
+      (Self::UserWriteChat, "user%3Awrite%3Achat"),
+    ]
+    .iter()
   }
 }
 
@@ -216,28 +221,28 @@ impl From<SubscriptionType> for Scope {
     match value {
       SubscriptionType::Follow => Scope::ModeratorReadFollowers,
       SubscriptionType::AdBreakBegin => Scope::ChannelReadAds,
-      SubscriptionType::ChatClear => todo!(),
-      SubscriptionType::ChatClearUserMessages => todo!(),
-      SubscriptionType::ChatMessage => todo!(),
-      SubscriptionType::ChatMessageDelete => todo!(),
-      SubscriptionType::Subscribe => todo!(),
-      SubscriptionType::SubscriptionGift => todo!(),
-      SubscriptionType::SubscriptionMessage => todo!(),
-      SubscriptionType::Cheer => todo!(),
-      SubscriptionType::Raid => todo!(),
-      SubscriptionType::PointsCustomRewardRedemptionAdd => todo!(),
-      SubscriptionType::PollBegin => todo!(),
-      SubscriptionType::PollProgress => todo!(),
-      SubscriptionType::PollEnd => todo!(),
-      SubscriptionType::PredictionBegin => todo!(),
-      SubscriptionType::PredictionProgress => todo!(),
-      SubscriptionType::PredictionLock => todo!(),
-      SubscriptionType::PredictionEnd => todo!(),
-      SubscriptionType::CharityDonation => todo!(),
-      SubscriptionType::HypeTrainBegin => todo!(),
-      SubscriptionType::HypeTrainProgress => todo!(),
-      SubscriptionType::HypeTrainEnd => todo!(),
-      SubscriptionType::ShoutoutReceived => todo!(),
+      SubscriptionType::ChatClear => Scope::UserReadChat,
+      SubscriptionType::ChatClearUserMessages => Scope::UserReadChat,
+      SubscriptionType::ChatMessage => Scope::UserReadChat,
+      SubscriptionType::ChatMessageDelete => Scope::UserReadChat,
+      SubscriptionType::Subscribe => Scope::ChannelReadSubscriptions,
+      SubscriptionType::SubscriptionGift => Scope::ChannelReadSubscriptions,
+      SubscriptionType::SubscriptionMessage => Scope::ChannelReadSubscriptions,
+      SubscriptionType::Cheer => Scope::BitsRead,
+      SubscriptionType::Raid => Scope::none(),
+      SubscriptionType::PointsCustomRewardRedemptionAdd => Scope::ChannelReadRedemptions,
+      SubscriptionType::PollBegin => Scope::ChannelReadPolls,
+      SubscriptionType::PollProgress => Scope::ChannelReadPolls,
+      SubscriptionType::PollEnd => Scope::ChannelReadPolls,
+      SubscriptionType::PredictionBegin => Scope::ChannelReadPredictions,
+      SubscriptionType::PredictionProgress => Scope::ChannelReadPredictions,
+      SubscriptionType::PredictionLock => Scope::ChannelReadPredictions,
+      SubscriptionType::PredictionEnd => Scope::ChannelReadPredictions,
+      SubscriptionType::CharityDonation => Scope::ChannelReadCharity,
+      SubscriptionType::HypeTrainBegin => Scope::ChannelReadHypeTrain,
+      SubscriptionType::HypeTrainProgress => Scope::ChannelReadHypeTrain,
+      SubscriptionType::HypeTrainEnd => Scope::ChannelReadHypeTrain,
+      SubscriptionType::ShoutoutCreate => Scope::ModeratorReadShoutouts,
     }
   }
 }

@@ -87,12 +87,12 @@ impl Twitch {
 
 //   #[test]
 //   fn test() {
-//     let scopes = vec![Scope::AnalyticsReadExtensions];
+//     let scopes = Scope::UserReadChat | Scope::BitsRead | SubscriptionType::ChatClear.into();
 
 //     let client_id = std::env::var("CLIENT_ID").unwrap();
 //     let client_secret = std::env::var("CLIENT_SECRET").unwrap();
 
-//     let tokens = get_refresh_token(client_id, client_secret, &scopes);
+//     let tokens = get_refresh_token(client_id, client_secret, scopes);
 //     println!("{tokens:#?}");
 //   }
 // }

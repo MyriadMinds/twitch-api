@@ -17,6 +17,8 @@ pub enum APIError {
   Unauthorized,
   #[error("the provided token is missing required scopes")]
   Forbidden,
+  #[error("request is missing pagination information")]
+  NoPagination,
 }
 
 impl From<ureq::Error> for APIError {
@@ -92,11 +94,7 @@ impl TwitchAPI {
 
       parsed_subscriptions.append(&mut subscriptions.data);
 
-      match subscriptions
-        .pagination
-        .ok_or(APIError::ParseError("request missing required pagination info".to_owned()))?
-        .cursor
-      {
+      match subscriptions.pagination.ok_or(APIError::NoPagination)?.cursor {
         Some(new_cursor) => cursor = new_cursor,
         None => break,
       }
@@ -105,11 +103,11 @@ impl TwitchAPI {
     Ok(parsed_subscriptions)
   }
 
-  pub(super) fn post<R: DeserializeOwned, T: Serialize>(
-    &self,
-    endpoint: APIEndpoint,
-    data: T,
-  ) -> Result<R> {
+  pub(super) fn post<R, T>(&self, endpoint: APIEndpoint, data: T) -> Result<R>
+  where
+    R: DeserializeOwned,
+    T: Serialize,
+  {
     let mut response = ureq::post(endpoint.endpoint())
       .set("Authorization", &format!("Bearer {}", self.token))
       .set("Client-Id", &self.client_id)
