@@ -1,34 +1,71 @@
 use std::io::{BufRead, BufReader, Write};
-use std::net::TcpListener;
+use std::net::{TcpListener, TcpStream};
 
 use bitmask_enum::bitmask;
 use twitch_eventsub_structs::NewAccessTokenResponse;
 
 use crate::SubscriptionType;
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+const RESPONSE_OK: &str = "HTTP/1.1 200 OK\r\n\r\n";
+const RESPONSE_SCRIPT: &str = "\
+  HTTP/1.1 200 OK\r\n\
+  Content-Length: 247\r\n\r\n\
+  <html><head></head><body><script>
+		  var url_parts = String(window.location).split(\"#\");
+		  if(url_parts.length > 1) {
+			  var redirect_url = url_parts[0] + \"?\" + url_parts[1];
+			  window.location = redirect_url;
+		  }
+	</script></body></html>\
+";
+
+pub fn get_access_token(client_id: String, scopes: Scope) -> String {
+  let listener = TcpListener::bind("127.0.0.1:8080").expect("Failed to start HTTP server.");
+
+  let request = format!(
+    "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id={}&redirect_uri=http://localhost:8080&scope={}",
+    client_id,
+    scopes.get_scopes()
+  );
+  open::that(request).expect("Failed to open authorization page.");
+
+  let (connection, _) = listener.accept().expect("Failed to establish HTTP connection.");
+  let _ = handle_connection(connection, RESPONSE_SCRIPT);
+
+  let (connection, _) = listener.accept().expect("Failed to establish HTTP connection.");
+  let request = handle_connection(connection, RESPONSE_OK);
+
+  let (token, _) = request
+    .first()
+    .unwrap()
+    .strip_prefix("GET /?access_token=")
+    .and_then(|s| s.split_once("&"))
+    .unwrap();
+
+  token.to_string()
+}
+
 pub fn get_refresh_token(
   client_id: String,
   client_secret: String,
   scopes: Scope,
 ) -> (String, String) {
+  let listener = TcpListener::bind("127.0.0.1:8080").expect("Failed to start HTTP server.");
+
   let request = format!(
     "https://id.twitch.tv/oauth2/authorize?response_type=code&client_id={}&redirect_uri=http://localhost:8080&scope={}",
     client_id,
     scopes.get_scopes()
   );
-
-  let listener = TcpListener::bind("127.0.0.1:8080").expect("Failed to start HTTP server.");
-
   open::that(request).expect("Failed to open authorization page.");
-  let (mut connection, _) = listener.accept().expect("Failed to establish HTTP connection.");
-  let reader = BufReader::new(&connection);
 
-  let request = reader.lines().next().unwrap().unwrap();
-  let (code, _) = request.strip_prefix("GET /?code=").and_then(|s| s.split_once("&")).unwrap();
+  let (connection, _) = listener.accept().expect("Failed to establish HTTP connection.");
+  let request = handle_connection(connection, RESPONSE_OK);
 
-  let response = "HTTP/1.1 200 OK\r\n\r\n";
-  connection.write_all(response.as_bytes()).expect("Failed to send response.");
-
+  let (code, _) =
+    request.first().unwrap().strip_prefix("GET /?code=").and_then(|s| s.split_once("&")).unwrap();
   let response = ureq::post("https://id.twitch.tv/oauth2/token")
     .send_form(&[
       ("client_id", &client_id),
@@ -45,6 +82,17 @@ pub fn get_refresh_token(
     response.access_token,
     response.refresh_token.expect("Token request response didn't contain refresh token"),
   )
+}
+
+fn handle_connection(mut stream: TcpStream, response: &str) -> Vec<String> {
+  let request = BufReader::new(&stream)
+    .lines()
+    .map(|result| result.unwrap())
+    .take_while(|line| !line.is_empty())
+    .collect();
+  stream.write_all(response.as_bytes()).expect("Failed to send response.");
+
+  request
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

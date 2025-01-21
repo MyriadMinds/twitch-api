@@ -8,7 +8,7 @@ use api::{APIEndpoint, APIError, TwitchAPI};
 pub use eventsub::{Conditions, Eventsub, EventsubError, Subscription, SubscriptionType};
 use thiserror::Error;
 #[cfg(feature = "token-helpers")]
-pub use token::{Scope, get_refresh_token};
+pub use token::{Scope, get_access_token, get_refresh_token};
 use twitch_eventsub_structs::{EventSubscription, NewAccessTokenResponse};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -90,9 +90,8 @@ impl Twitch {
 //     let scopes = Scope::UserReadChat | Scope::BitsRead | SubscriptionType::ChatClear.into();
 
 //     let client_id = std::env::var("CLIENT_ID").unwrap();
-//     let client_secret = std::env::var("CLIENT_SECRET").unwrap();
 
-//     let tokens = get_refresh_token(client_id, client_secret, scopes);
+//     let tokens = get_access_token(client_id, scopes);
 //     println!("{tokens:#?}");
 //   }
 // }
