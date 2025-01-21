@@ -5,7 +5,7 @@ mod eventsub;
 mod token;
 
 use api::{APIEndpoint, APIError, TwitchAPI};
-pub use eventsub::{Conditions, Eventsub, EventsubError, Subscription, SubscriptionType};
+pub use eventsub::{Conditions, Eventsub, EventsubError, Raid, Subscription, SubscriptionType};
 use thiserror::Error;
 #[cfg(feature = "token-helpers")]
 pub use token::{Scope, get_access_token, get_refresh_token};

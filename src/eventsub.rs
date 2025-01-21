@@ -5,7 +5,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::thread::JoinHandle;
 
 use log::{error, info, warn};
-pub use subscriptions::{Conditions, Subscription, SubscriptionType};
+pub use subscriptions::{Conditions, Raid, Subscription, SubscriptionType};
 use thiserror::Error;
 use tungstenite::stream::MaybeTlsStream;
 use tungstenite::{Message, WebSocket};
