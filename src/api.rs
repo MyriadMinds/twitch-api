@@ -1,3 +1,5 @@
+pub mod responses;
+
 use log::error;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};

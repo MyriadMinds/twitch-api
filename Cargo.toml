@@ -9,10 +9,10 @@ token-helpers = ["dep:bitmask-enum", "dep:open"]
 [dependencies]
 log = "0.4.22"
 tungstenite = { version = "0.24.0", features = ["native-tls"] }
-twitch_eventsub_structs = { git = "https://github.com/Owlkaline/TwitchEventSubStructs.git" }
 ureq = { version = "2.10.0", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "1.0.63"
 open = { version = "5.3.2", optional = true }
 bitmask-enum = { version = "2.2.5", optional = true }
+serde_with = "3.12.0"

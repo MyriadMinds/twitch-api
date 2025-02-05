@@ -4,12 +4,13 @@ mod eventsub;
 #[cfg(feature = "token-helpers")]
 mod token;
 
+pub use api::responses;
 use api::{APIEndpoint, APIError, TwitchAPI};
+pub use eventsub::events::*;
 pub use eventsub::{Conditions, Eventsub, EventsubError, Raid, Subscription, SubscriptionType};
 use thiserror::Error;
 #[cfg(feature = "token-helpers")]
 pub use token::{Scope, get_access_token, get_refresh_token};
-use twitch_eventsub_structs::{EventSubscription, NewAccessTokenResponse};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -58,7 +59,7 @@ impl Twitch {
       .set("Content-Type", "application/x-www-form-urlencoded")
       .send_string(&request_body)
       .map_err(|e| APIError::from(e))?
-      .into_json::<NewAccessTokenResponse>()
+      .into_json::<responses::NewAccessTokenResponse>()
       .map_err(|e| APIError::from(e))?;
 
     Ok((
@@ -76,8 +77,8 @@ impl Twitch {
   pub fn create_eventsub_subscription(
     &self,
     subscription: Subscription,
-  ) -> Result<EventSubscription, TwitchError> {
-    Ok(self.api.post::<EventSubscription, _>(APIEndpoint::Subscriptions, subscription)?)
+  ) -> Result<Subscription, TwitchError> {
+    Ok(self.api.post::<Subscription, _>(APIEndpoint::Subscriptions, subscription)?)
   }
 }
 

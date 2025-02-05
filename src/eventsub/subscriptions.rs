@@ -4,7 +4,7 @@ use ureq::json;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Subscription {
   id:                Option<String>,
   status:            Option<String>,

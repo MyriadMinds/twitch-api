@@ -1,15 +1,16 @@
+pub mod events;
 mod subscriptions;
 
 use std::net::TcpStream;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::JoinHandle;
 
+use events::{Event, Payload, Reconnect};
 use log::{error, info, warn};
 pub use subscriptions::{Conditions, Raid, Subscription, SubscriptionType};
 use thiserror::Error;
 use tungstenite::stream::MaybeTlsStream;
 use tungstenite::{Message, WebSocket};
-use twitch_eventsub_structs::GenericMessage;
 
 use super::api::APIEndpoint;
 
@@ -21,7 +22,7 @@ pub enum EventsubError {
   WebsocketError(tungstenite::Error),
   #[error("message received from twitch was not a session welcome")]
   IncorrectMessage,
-  #[error("message from twitch did not contain session ID")]
+  #[error("failed to acquire a welcome message from twitch")]
   NoSessionID,
   #[error("failed to parse incoming notification: {0}")]
   ParseError(serde_json::Error),
@@ -44,7 +45,7 @@ impl From<tungstenite::Error> for EventsubError {
 pub struct Eventsub {
   _thread:        JoinHandle<()>,
   pub session_id: String,
-  receiver:       Receiver<GenericMessage>,
+  receiver:       Receiver<Event>,
 }
 
 impl Eventsub {
@@ -53,12 +54,14 @@ impl Eventsub {
 
     let message = websocket.read()?;
     let Message::Text(message) = message else { return Err(EventsubError::IncorrectMessage) };
-    let message = serde_json::from_str::<GenericMessage>(&message)?;
+    let message = serde_json::from_str::<events::EventsubMessage>(&message)?;
+    let Payload::Welcome { session } = message.payload else {
+      return Err(EventsubError::IncorrectMessage);
+    };
 
-    let session_id =
-      message.payload.and_then(|p| p.session).map(|s| s.id).ok_or(EventsubError::NoSessionID)?;
+    let session_id = session.id;
 
-    let (sender, receiver) = std::sync::mpsc::channel::<GenericMessage>();
+    let (sender, receiver) = std::sync::mpsc::channel::<Event>();
     let mut eventsub = EventsubConnection { websocket, sender };
 
     let _thread = std::thread::spawn(move || {
@@ -68,7 +71,7 @@ impl Eventsub {
     Ok(Self { _thread, session_id, receiver })
   }
 
-  pub fn iter(&self) -> std::sync::mpsc::Iter<'_, GenericMessage> {
+  pub fn iter(&self) -> std::sync::mpsc::Iter<'_, Event> {
     self.receiver.iter()
   }
 }
@@ -77,7 +80,7 @@ impl Eventsub {
 
 struct EventsubConnection {
   websocket: WebSocket<MaybeTlsStream<TcpStream>>,
-  sender:    Sender<GenericMessage>,
+  sender:    Sender<Event>,
 }
 
 impl EventsubConnection {
@@ -103,20 +106,19 @@ impl EventsubConnection {
       TM::Close(Some(message)) => info!("Close request received, reason: {}", message.reason),
       TM::Close(None) => info!("Close request received"),
       TM::Pong(_) | TM::Binary(_) | TM::Frame(_) =>
-        info!("Received invalid message type over websocket"),
+        warn!("Received invalid websocket frame from eventsub"),
     };
   }
 
   fn handle_notification(&mut self, message: String) {
-    let Ok(message) = serde_json::from_str::<GenericMessage>(&message) else {
+    let Ok(message) = serde_json::from_str::<events::EventsubMessage>(&message) else {
       return error!("Failed to parse notification {}", message);
     };
 
-    match message.metadata.message_type.as_str() {
-      "notification" => self.sender.send(message).unwrap_or(()),
-      "session_reconnect" => self.reconnect(message),
-      "session_keepalive" => (),
-      "revocation" => self
+    match message.payload {
+      Payload::Notification { subscription: _, event } => self.sender.send(event).unwrap_or(()),
+      Payload::Reconnect { session } => self.reconnect(session),
+      Payload::Revocation { subscription: _ } => self
         .websocket
         .send(tungstenite::Message::Close(None))
         .unwrap_or(error!("Failed to close websocket on revocation")),
@@ -126,13 +128,10 @@ impl EventsubConnection {
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  fn reconnect(&mut self, message: GenericMessage) {
+  fn reconnect(&mut self, session: Reconnect) {
     info!("Received request to reconnect websocket!");
-    let Some(url) = message.payload.and_then(|p| p.session).and_then(|s| s.reconnect_url) else {
-      return error!("Request doesn't contain reconnection info!");
-    };
 
-    match tungstenite::connect(url) {
+    match tungstenite::connect(session.reconnect_url) {
       Ok((websocket, _)) => {
         // Process the rest of messages on the old socket before swap
         self.run();
